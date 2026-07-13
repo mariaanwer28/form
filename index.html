@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Application Form</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <h1>🧑‍💼 Job Application</h1>
+  <p class="subtitle">Apna bio-data neechay form main submit karein</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabFormBtn" onclick="switchTab('form')">📝 Apply Karein</button>
+    <button class="tab-btn" id="tabAdminBtn" onclick="switchTab('admin')">🔐 Admin Panel</button>
+  </div>
+
+  <!-- APPLICATION FORM -->
+  <div id="formSection">
+    <div class="card">
+      <div class="success-msg" id="successMsg">✅ Aap ki application submit ho gayi hai. Shukriya!</div>
+      <form id="jobForm">
+        <label>Position (kis job ke liye apply kar rahe hain) *</label>
+        <input type="text" id="position" required placeholder="e.g. Sales Officer">
+
+        <div class="row2">
+          <div>
+            <label>Poora Naam *</label>
+            <input type="text" id="fullName" required placeholder="Aap ka naam">
+          </div>
+          <div>
+            <label>Father Name</label>
+            <input type="text" id="fatherName" placeholder="Walid ka naam">
+          </div>
+        </div>
+
+        <div class="row2">
+          <div>
+            <label>Phone Number *</label>
+            <input type="tel" id="phone" required placeholder="03xx-xxxxxxx">
+          </div>
+          <div>
+            <label>Email</label>
+            <input type="email" id="email" placeholder="example@email.com">
+          </div>
+        </div>
+
+        <div class="row2">
+          <div>
+            <label>Shehar / City</label>
+            <input type="text" id="city" placeholder="e.g. Karachi">
+          </div>
+          <div>
+            <label>Age</label>
+            <input type="number" id="age" min="14" max="80" placeholder="Umar">
+          </div>
+        </div>
+
+        <label>Taleem (Education) *</label>
+        <input type="text" id="education" required placeholder="e.g. Intermediate, Bachelors">
+
+        <label>Tajurba (Work Experience)</label>
+        <textarea id="experience" placeholder="Pichli jobs ya kaam ka tajurba likhein"></textarea>
+
+        <label>Skills</label>
+        <textarea id="skills" placeholder="e.g. MS Office, Communication, Driving etc."></textarea>
+
+        <label>Koi aur baat jo bataana chahain (Cover Note)</label>
+        <textarea id="coverNote" placeholder="Optional"></textarea>
+
+        <button type="submit" class="submit-btn">Application Submit Karein</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div id="adminSection" style="display:none;">
+    <div class="card">
+      <div class="admin-header">
+        <span class="admin-title">Sab Applications</span>
+        <span class="count-pill" id="countPill">0 applications</span>
+      </div>
+      <input type="text" class="search-box" id="searchBox" placeholder="🔍 Naam ya position se search karein..." oninput="renderApplications()">
+      <div id="appsList"></div>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
