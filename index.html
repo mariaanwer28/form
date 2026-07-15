@@ -20,6 +20,8 @@
   <div id="formSection">
     <div class="card">
       <div class="success-msg" id="successMsg">✅ Aap ki application submit ho gayi hai. Shukriya!</div>
+      <div class="error-msg" id="errorMsg"></div>
+
       <form id="jobForm">
         <label>Position (kis job ke liye apply kar rahe hain) *</label>
         <input type="text" id="position" required placeholder="e.g. Sales Officer">
@@ -69,7 +71,11 @@
         <label>Koi aur baat jo bataana chahain (Cover Note)</label>
         <textarea id="coverNote" placeholder="Optional"></textarea>
 
-        <button type="submit" class="submit-btn">Application Submit Karein</button>
+        <label>Apni Tasveer (Photo) — Optional</label>
+        <input type="file" id="photoFile" accept="image/*">
+        <div class="upload-status" id="uploadStatus"></div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">Application Submit Karein</button>
       </form>
     </div>
   </div>
@@ -82,11 +88,17 @@
         <span class="count-pill" id="countPill">0 applications</span>
       </div>
       <input type="text" class="search-box" id="searchBox" placeholder="🔍 Naam ya position se search karein..." oninput="renderApplications()">
-      <div id="appsList"></div>
+      <div id="appsList"><div class="loading">Loading...</div></div>
     </div>
   </div>
 </div>
 
+<!-- Firebase SDK (compat version - beginner friendly) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<!-- Your config -->
+<script src="config.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

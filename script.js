@@ -1,59 +1,115 @@
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const applicationsRef = db.collection('applications');
+
 let allApps = [];
+let unsubscribeListener = null;
 
 function switchTab(tab){
   document.getElementById('tabFormBtn').classList.toggle('active', tab==='form');
   document.getElementById('tabAdminBtn').classList.toggle('active', tab==='admin');
   document.getElementById('formSection').style.display = tab==='form' ? 'block':'none';
   document.getElementById('adminSection').style.display = tab==='admin' ? 'block':'none';
-  if(tab==='admin') loadApplications();
+  if(tab==='admin') startListening();
 }
 
-document.getElementById('jobForm').addEventListener('submit', function(e){
+// Upload photo to Cloudinary, returns secure_url or null
+async function uploadPhotoToCloudinary(file){
+  if(!file) return null;
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+  const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    body: formData
+  });
+
+  if(!response.ok){
+    throw new Error('Cloudinary upload failed');
+  }
+
+  const data = await response.json();
+  return data.secure_url;
+}
+
+document.getElementById('jobForm').addEventListener('submit', async function(e){
   e.preventDefault();
 
-  const app = {
-    id: 'app_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
-    position: document.getElementById('position').value.trim(),
-    fullName: document.getElementById('fullName').value.trim(),
-    fatherName: document.getElementById('fatherName').value.trim(),
-    phone: document.getElementById('phone').value.trim(),
-    email: document.getElementById('email').value.trim(),
-    city: document.getElementById('city').value.trim(),
-    age: document.getElementById('age').value.trim(),
-    education: document.getElementById('education').value.trim(),
-    experience: document.getElementById('experience').value.trim(),
-    skills: document.getElementById('skills').value.trim(),
-    coverNote: document.getElementById('coverNote').value.trim(),
-    status: 'pending',
-    submittedAt: new Date().toISOString()
-  };
+  const submitBtn = document.getElementById('submitBtn');
+  const uploadStatus = document.getElementById('uploadStatus');
+  const errorMsg = document.getElementById('errorMsg');
+  errorMsg.style.display = 'none';
+
+  const photoFile = document.getElementById('photoFile').files[0];
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submit ho raha hai...';
 
   try{
-    const apps = JSON.parse(localStorage.getItem('job_applications') || '[]');
-    apps.push(app);
-    localStorage.setItem('job_applications', JSON.stringify(apps));
+    let photoUrl = null;
+
+    if(photoFile){
+      uploadStatus.textContent = '📤 Photo upload ho rahi hai...';
+      photoUrl = await uploadPhotoToCloudinary(photoFile);
+      uploadStatus.textContent = '✅ Photo upload ho gayi';
+    }
+
+    const app = {
+      position: document.getElementById('position').value.trim(),
+      fullName: document.getElementById('fullName').value.trim(),
+      fatherName: document.getElementById('fatherName').value.trim(),
+      phone: document.getElementById('phone').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      city: document.getElementById('city').value.trim(),
+      age: document.getElementById('age').value.trim(),
+      education: document.getElementById('education').value.trim(),
+      experience: document.getElementById('experience').value.trim(),
+      skills: document.getElementById('skills').value.trim(),
+      coverNote: document.getElementById('coverNote').value.trim(),
+      photoUrl: photoUrl,
+      status: 'pending',
+      submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    await applicationsRef.add(app);
 
     document.getElementById('jobForm').reset();
+    uploadStatus.textContent = '';
     const msg = document.getElementById('successMsg');
     msg.style.display = 'block';
     setTimeout(()=>{ msg.style.display='none'; }, 4000);
+
   }catch(err){
     console.error(err);
-    alert('Submit karne mein error aayi. Dobara koshish karein.');
+    errorMsg.textContent = '❌ Submit karne mein error aayi: ' + err.message;
+    errorMsg.style.display = 'block';
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Application Submit Karein';
   }
 });
 
-function loadApplications(){
+// Real-time listener for admin panel
+function startListening(){
   const listEl = document.getElementById('appsList');
-  try{
-    const apps = JSON.parse(localStorage.getItem('job_applications') || '[]');
-    apps.sort((a,b)=> new Date(b.submittedAt) - new Date(a.submittedAt));
-    allApps = apps;
-    renderApplications();
-  }catch(err){
-    console.error(err);
-    listEl.innerHTML = '<div class="empty-state">Applications load nahi ho saken. Dobara try karein.</div>';
-  }
+  listEl.innerHTML = '<div class="loading">Loading...</div>';
+
+  if(unsubscribeListener) unsubscribeListener();
+
+  unsubscribeListener = applicationsRef
+    .orderBy('submittedAt', 'desc')
+    .onSnapshot(function(snapshot){
+      allApps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderApplications();
+    }, function(err){
+      console.error(err);
+      listEl.innerHTML = '<div class="empty-state">Applications load nahi ho saken.<br>' + err.message + '</div>';
+    });
 }
 
 function renderApplications(){
@@ -78,11 +134,14 @@ function renderApplications(){
   listEl.innerHTML = apps.map(a => {
     const statusClass = a.status === 'hired' ? 'status-hired' : (a.status === 'rejected' ? 'status-rejected' : 'status-pending');
     const statusText = a.status === 'hired' ? '✅ Hired' : (a.status === 'rejected' ? '❌ Rejected' : '⏳ Pending');
-    const date = new Date(a.submittedAt).toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+    const date = a.submittedAt && a.submittedAt.toDate ? a.submittedAt.toDate().toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
+    const photoHtml = a.photoUrl ? `<img src="${a.photoUrl}" class="app-photo" alt="photo">` : '';
+
     return `
       <div class="app-card">
         <div class="app-top">
-          <div>
+          ${photoHtml}
+          <div class="app-info">
             <div class="app-name">${escapeHtml(a.fullName)}</div>
             <div class="app-position">${escapeHtml(a.position)}</div>
           </div>
@@ -107,21 +166,12 @@ function renderApplications(){
   }).join('');
 }
 
-function updateStatus(id, status){
-  const app = allApps.find(a => a.id === id);
-  if(!app) return;
-  app.status = status;
+async function updateStatus(id, status){
   try{
-    const apps = JSON.parse(localStorage.getItem('job_applications') || '[]');
-    const idx = apps.findIndex(a => a.id === id);
-    if(idx !== -1){
-      apps[idx] = app;
-      localStorage.setItem('job_applications', JSON.stringify(apps));
-    }
-    renderApplications();
+    await applicationsRef.doc(id).update({ status: status });
   }catch(err){
     console.error(err);
-    alert('Status update nahi ho saka, dobara koshish karein.');
+    alert('Status update nahi ho saka: ' + err.message);
   }
 }
 
